@@ -2,6 +2,8 @@
 
 # AMA vs Defender Coverage Workbook
 
+## ⚠️ This workbook assumes Microsoft Defender XDR data is ingested into Sentinel. Without ingestion, device name normalization and correlation may be inconsistent. To workaround that, copy the KQL query from the Github page and run it in Advanced Hunting.
+
 ## Overview
 
 This Microsoft Sentinel Workbook provides visibility into Microsoft Defender for Endpoint (MDE)–managed devices and their telemetry coverage within Sentinel. It helps security and operations teams verify that devices are properly configured for comprehensive monitoring by checking:

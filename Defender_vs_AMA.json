@@ -4,10 +4,10 @@
         {
             "type": 1,
             "content": {
-                "json": "# AMA insights vs Defender for Endpoint/Server\n---\nThis report provides visibility into Microsoft Defender for Endpoint (MDE)–managed devices to determine their telemetry and data collection coverage within Microsoft Sentinel. Specifically, it identifies which devices have the Azure Monitor Agent (AMA) installed and are actively sending SecurityEvent logs to Sentinel.\n\nThe goal is to help security and operations teams ensure that all MDE-enrolled devices are properly configured for comprehensive security monitoring. By correlating data from DeviceInfo, Heartbeat, and SecurityEvent tables, the report highlights:\n\n- Devices with MDE installed but missing the AMA agent.\n- Devices that are not sending SecurityEvent logs despite being onboarded to MDE.\n- Last heartbeat and log ingestion timestamps for each device to assess freshness and connectivity.\n\nThis allows teams to quickly detect configuration gaps, prioritize remediation efforts, and maintain consistent visibility across all Windows Server endpoints."
+                "json": "# AMA insights vs Defender for Endpoint/Server\n---\n\n## ⚠️ This workbook assumes Microsoft Defender XDR data is ingested into Sentinel. Without ingestion, device name normalization and correlation may be inconsistent. To workaround that, copy the KQL query from the Github page and run it in Advanced Hunting.\n\n---\n\nThis report provides visibility into Microsoft Defender for Endpoint (MDE)–managed devices to determine their telemetry and data collection coverage within Microsoft Sentinel. Specifically, it identifies which devices have the Azure Monitor Agent (AMA) installed and are actively sending SecurityEvent logs to Sentinel.\n\nThe goal is to help security and operations teams ensure that all MDE-enrolled devices are properly configured for comprehensive security monitoring. By correlating data from DeviceInfo, Heartbeat, and SecurityEvent tables, the report highlights:\n\n- Devices with MDE installed but missing the AMA agent.\n- Devices that are not sending SecurityEvent logs despite being onboarded to AMA.\n- Last heartbeat and log ingestion timestamps for each device to assess freshness and connectivity.\n\nThis allows teams to quickly detect configuration gaps, prioritize remediation efforts, and maintain consistent visibility across all Windows (Server) endpoints."
             },
             "name": "text - 2",
-            "id": "b9c1e093-fe7f-469d-bb71-f3b010b46b02"
+            "id": "3e10f919-bd90-486b-9d05-680554f5b0f2"
         },
         {
             "type": 1,
@@ -15,7 +15,7 @@
                 "json": "## Filter\r\nFilter based on Workspace, Timerange, OS (text) and AMA enabled (all, yes, no)."
             },
             "name": "text - 8",
-            "id": "774226a4-65b4-452d-be64-956eac11da33"
+            "id": "ae40f534-3ccf-4607-b205-28ac848a6603"
         },
         {
             "type": 9,
@@ -25,7 +25,7 @@
                     {
                         "id": "69db8811-d30c-45c1-ae32-597d2da7cd35",
                         "version": "KqlParameterItem/1.0",
-                        "name": "Workbook",
+                        "name": "Workspace",
                         "type": 5,
                         "query": "resources | where type =~ 'Microsoft.operationsmanagement/solutions' | where name contains 'SecurityInsights' | project id = tostring(properties.workspaceResourceId)",
                         "typeSettings": {
@@ -37,7 +37,8 @@
                         },
                         "queryType": 1,
                         "resourceType": "microsoft.resourcegraph/resources",
-                        "value": "/subscriptions/5acda791-8084-416f-a083-343dd37d8be3/resourcegroups/rg-siem-us/providers/microsoft.operationalinsights/workspaces/workspacelakeenabled"
+                        "value": "/subscriptions/5acda791-8084-416f-a083-343dd37d8be3/resourcegroups/rg-siem-us/providers/microsoft.operationalinsights/workspaces/workspacelakeenabled",
+                        "key": "69db8811-d30c-45c1-ae32-597d2da7cd35"
                     },
                     {
                         "id": "811473d6-0ecb-4ad1-8f71-99425718f05d",
@@ -68,7 +69,8 @@
                         },
                         "value": {
                             "durationMs": 5184000000
-                        }
+                        },
+                        "key": "811473d6-0ecb-4ad1-8f71-99425718f05d"
                     },
                     {
                         "id": "4dcbf10d-cee3-4c37-a816-a31b6aae7fed",
@@ -79,7 +81,8 @@
                         "timeContext": {
                             "durationMs": 86400000
                         },
-                        "value": ""
+                        "value": "",
+                        "key": "4dcbf10d-cee3-4c37-a816-a31b6aae7fed"
                     },
                     {
                         "id": "20111e0e-4ff6-4757-95fd-71f8fbdf2dfe",
@@ -95,13 +98,14 @@
                         "timeContext": {
                             "durationMs": 86400000
                         },
-                        "value": "All"
+                        "value": "All",
+                        "key": "20111e0e-4ff6-4757-95fd-71f8fbdf2dfe"
                     }
                 ],
                 "style": "pills"
             },
             "name": "parameters - 1",
-            "id": "c8bd2ebc-9ba5-4218-ac6d-fb5d7051b9ed"
+            "id": "43b30695-b13a-4e92-adcd-59fcd81a0afd"
         },
         {
             "type": 1,
@@ -109,19 +113,19 @@
                 "json": "## Summary on number of devices\r\nWhen filters are applied the totals will change accordingly."
             },
             "name": "text - 6",
-            "id": "8a6bc9a5-7fd1-49fb-9dd2-4815039399e9"
+            "id": "ceb89957-a9a4-4185-b8f8-1b3f554c8e31"
         },
         {
             "type": 3,
             "content": {
                 "version": "KqlItem/1.0",
-                "query": "// AMA heartbeats\r\nlet AMAConnected = \r\n    Heartbeat\r\n    | summarize LastAMASeen = max(TimeGenerated) by Computer\r\n    | extend ComputerLower = tolower(split(Computer, \".\")[0]);\r\n// Security events\r\nlet DevicesWithSecurityEvents = \r\n    SecurityEvent\r\n    | summarize LastSecurityEvent = max(TimeGenerated) by Computer\r\n    | extend ComputerLower = tolower(split(Computer, \".\")[0]);\r\n// Defender devices (keep OSPlatform)\r\nDeviceInfo\r\n| summarize arg_max(TimeGenerated, OSPlatform, *) by DeviceName\r\n| extend DeviceNameLower = tolower(split(DeviceName, \".\")[0])\r\n// join AMA info\r\n| join kind=leftouter (AMAConnected) on $left.DeviceNameLower == $right.ComputerLower\r\n// join SecurityEvent info\r\n| join kind=leftouter (DevicesWithSecurityEvents) on $left.DeviceNameLower == $right.ComputerLower\r\n// derive OS type\r\n| extend OSPlatform = tostring(OSPlatform)\r\n| extend \r\n    HasAMA = iff(isnotempty(LastAMASeen), \"Yes\", \"No\"),\r\n    SendsSecurityLogs = iff(isnotempty(LastSecurityEvent), \"Yes\", \"No\")\r\n// final projection\r\n| project \r\n    OriginalDeviceName = DeviceName,\r\n    DeviceName = tostring(split(DeviceName, \".\")[0]),\r\n    OSPlatform,\r\n    HasAMA,\r\n    LastAMASeen,\r\n    SendsSecurityLogs,\r\n    LastSecurityEvent\r\n| order by DeviceName asc\r\n//Filter has AMA\r\n| where '{HasAMA}' == 'All' or HasAMA == '{HasAMA}'\r\n//Filter OS Platform\r\n//Text filter for OSPlatform column, provide for example ServiceFabricReliableActorEvent\r\n| where OSPlatform contains '{ServerFilter}'\r\n| summarize\r\n    TotalAll = count(),\r\n    TotalYes = countif(HasAMA == \"Yes\"),\r\n    TotalNo = countif(HasAMA == \"No\")\r\n| project Category = pack_array(\"Number of devices\",\"Yes\",\"No\"), Total = pack_array(TotalAll, TotalYes, TotalNo)\r\n| mv-expand Category, Total\r\n",
+                "query": "// AMA heartbeats\r\nlet AMAConnected = \r\n    Heartbeat\r\n    | summarize LastAMASeen = max(TimeGenerated) by Computer\r\n    | extend DeviceShort = tolower(split(Computer, \".\")[0]);\r\n// Security events\r\nlet DevicesWithSecurityEvents = \r\n    SecurityEvent\r\n    | summarize LastSecurityEvent = max(TimeGenerated) by Computer\r\n    | extend DeviceShort = tolower(split(Computer, \".\")[0]);\r\n// Defender devices (keep OSPlatform)\r\nDeviceInfo\r\n| summarize arg_max(TimeGenerated, OSPlatform, *) by DeviceName\r\n| extend DeviceShort = tolower(split(DeviceName, \".\")[0])\r\n// join AMA info\r\n| join kind=leftouter (AMAConnected) on DeviceShort\r\n// join SecurityEvent info\r\n| join kind=leftouter (DevicesWithSecurityEvents) on DeviceShort\r\n// derive OS type\r\n| extend OSPlatform = tostring(OSPlatform)\r\n| extend \r\n    HasAMA = iff(isnotempty(LastAMASeen), \"Yes\", \"No\"),\r\n    SendsSecurityLogs = iff(isnotempty(LastSecurityEvent), \"Yes\", \"No\")\r\n// final projection\r\n| project \r\n    OriginalDeviceName = DeviceName,\r\n    DeviceName = tostring(split(DeviceName, \".\")[0]),\r\n    OSPlatform,\r\n    HasAMA,\r\n    LastAMASeen,\r\n    SendsSecurityLogs,\r\n    LastSecurityEvent\r\n| order by DeviceName asc\r\n//Filter has AMA\r\n| where '{HasAMA}' == 'All' or HasAMA == '{HasAMA}'\r\n//Filter OS Platform\r\n//Text filter for OSPlatform column, provide for example ServiceFabricReliableActorEvent\r\n| where OSPlatform contains '{ServerFilter}'\r\n| summarize\r\n    TotalAll = count(),\r\n    TotalYes = countif(HasAMA == \"Yes\"),\r\n    TotalNo = countif(HasAMA == \"No\")\r\n| project Category = pack_array(\"Number of devices\",\"AMA coverage\",\"No AMA\"), Total = pack_array(TotalAll, TotalYes, TotalNo)\r\n| mv-expand Category, Total\r\n",
                 "size": 4,
                 "timeContextFromParameter": "TimeRange",
                 "queryType": 0,
                 "resourceType": "microsoft.operationalinsights/workspaces",
                 "crossComponentResources": [
-                    "{Workbook}"
+                    "{Workspace}"
                 ],
                 "visualization": "tiles",
                 "tileSettings": {
@@ -144,25 +148,25 @@
                 }
             },
             "name": "CountforTiles",
-            "id": "2ccaf9a3-41ae-4d4c-935f-bf130d06b982"
+            "id": "8dd95680-f327-4f2d-8cf0-b011aaea1c48"
         },
         {
             "type": 3,
             "content": {
                 "version": "KqlItem/1.0",
-                "query": "// Defender devices (only truly onboarded) with AMA & SecurityEvent\r\n(\r\nDeviceInfo\r\n| where OnboardingStatus == \"Onboarded\"\r\n| summarize arg_max(TimeGenerated, OSPlatform, *) by DeviceName\r\n| extend DeviceNameLower = tolower(DeviceName)\r\n| join kind=leftouter (\r\n    Heartbeat\r\n    | where TimeGenerated > ago(30d)\r\n    | summarize LastAMASeen = max(TimeGenerated) by Computer\r\n    | extend ComputerLower = tolower(Computer)\r\n    )\r\n    on $left.DeviceNameLower == $right.ComputerLower\r\n| join kind=leftouter (\r\n    SecurityEvent\r\n    | where TimeGenerated > ago(30d)\r\n    | summarize LastSecurityEvent = max(TimeGenerated) by Computer\r\n    | extend ComputerLower = tolower(Computer)\r\n    )\r\n    on $left.DeviceNameLower == $right.ComputerLower\r\n| extend \r\n    OSPlatform = tostring(OSPlatform),\r\n    HasAMA = iff(isnotempty(LastAMASeen), \"Yes\", \"No\"),\r\n    SendsSecurityLogs = iff(isnotempty(LastSecurityEvent), \"Yes\", \"No\"),\r\n    Source = \"Defender Device\"\r\n| project\r\n    //DeviceName,\r\n    DeviceName = tostring(split(DeviceName, \".\")[0]),\r\n    OSPlatform,\r\n    HasAMA,\r\n    LastAMASeen,\r\n    SendsSecurityLogs,\r\n    LastSecurityEvent,\r\n    Source\r\n)\r\n// AMA-only devices (Heartbeat present, NOT onboarded to Defender)\r\n| union (\r\n    Heartbeat\r\n    | where TimeGenerated > ago(30d)\r\n    | summarize \r\n        LastAMASeen = max(TimeGenerated),\r\n        Latest = arg_max(TimeGenerated, OSType, OSName, Category, Solutions)\r\n        by Computer\r\n    | extend ComputerLower = tolower(Computer)\r\n    // exclude only devices that are actually ONBOARDED in DeviceInfo\r\n    | where ComputerLower !in (\r\n        DeviceInfo\r\n    | where OnboardingStatus == \"Onboarded\"\r\n    | summarize arg_max(TimeGenerated, OSPlatform, *) by DeviceName\r\n    | extend DeviceNameLower = tolower(DeviceName)\r\n    | project DeviceNameLower\r\n    )\r\n// join security events\r\n| join kind=leftouter (\r\n    SecurityEvent\r\n    | where TimeGenerated > ago(30d)\r\n    | summarize LastSecurityEvent = max(TimeGenerated) by Computer\r\n    | extend ComputerLower = tolower(Computer)\r\n    )\r\n    on ComputerLower\r\n| extend \r\n    DeviceName = Computer,\r\n    // prefer full OSName if available\r\n    OSPlatform = coalesce(OSName, OSType, Category, \"Unknown\"),\r\n    HasAMA = \"Yes\",\r\n    SendsSecurityLogs = iff(isnotempty(LastSecurityEvent), \"Yes\", \"No\"),\r\n    Source = \"AMA Only\"\r\n| project\r\n    DeviceName,\r\n    OSPlatform,\r\n    HasAMA,\r\n    LastAMASeen,\r\n    SendsSecurityLogs,\r\n    LastSecurityEvent,\r\n    Source\r\n)\r\n// classify\r\n| extend StatusCategory = case(\r\nSource == \"Defender Device\" and HasAMA == \"Yes\", \"MDE + AMA\",\r\nSource == \"Defender Device\" and HasAMA == \"No\", \"MDE Only\",\r\nSource == \"AMA Only\", \"AMA Only\",\r\n\"Unknown\"\r\n)\r\n// Removed server-only filter so all Windows 10/11 devices appear too\r\n| order by Source asc, DeviceName asc\r\n// HasAMA logic:\r\n// - if HasAMA == \"All\" -> don't filter\r\n// - otherwise filter for selected \"Yes\" or \"No\"\r\n| where '{HasAMA}' == 'All' or HasAMA == '{HasAMA}'\r\n//Filter OS Platform\r\n//Text filter for OSPlatform column, provide for example ServiceFabricReliableActorEvent\r\n| where OSPlatform contains '{ServerFilter}'",
-                "size": 0,
+                "query": "// Defender devices (only truly onboarded) with AMA & SecurityEvent\r\n(\r\nDeviceInfo\r\n| where OnboardingStatus == \"Onboarded\"\r\n| summarize arg_max(TimeGenerated, OSPlatform) by DeviceName\r\n| extend DeviceNameLower = tolower(DeviceName)\r\n| join kind=leftouter (\r\n    //Check for logs within 3 day timeframe. Change accordingly if you want to check a bigger timeframe.\r\n    Heartbeat\r\n    | where TimeGenerated > ago(3d)\r\n    | summarize LastAMASeen = max(TimeGenerated) by Computer\r\n    | extend ComputerLower = tolower(Computer)\r\n    )\r\n    on $left.DeviceNameLower == $right.ComputerLower\r\n| join kind=leftouter (\r\n    SecurityEvent\r\n    //Check for logs within 3 day timeframe. Change accordingly if you want to check a bigger timeframe.\r\n    | where TimeGenerated > ago(3d)\r\n    | summarize LastSecurityEvent = max(TimeGenerated) by Computer\r\n    | extend ComputerLower = tolower(Computer)\r\n    )\r\n    on $left.DeviceNameLower == $right.ComputerLower\r\n| extend \r\n    OSPlatform = tostring(OSPlatform),\r\n    HasAMA = iff(isnotempty(LastAMASeen), \"Yes\", \"No\"),\r\n    SendsSecurityLogs = iff(isnotempty(LastSecurityEvent), \"Yes\", \"No\"),\r\n    Source = \"Defender Device\"\r\n| project\r\n    //DeviceName,\r\n    DeviceName = tostring(split(DeviceName, \".\")[0]),\r\n    OSPlatform,\r\n    HasAMA,\r\n    LastAMASeen,\r\n    SendsSecurityLogs,\r\n    LastSecurityEvent,\r\n    Source\r\n)\r\n// AMA-only devices (Heartbeat present, NOT onboarded to Defender)\r\n| union (\r\n    Heartbeat\r\n    //Check for logs within 3 day timeframe. Change accordingly if you want to check a bigger timeframe.\r\n    | where TimeGenerated > ago(3d)\r\n    | summarize \r\n        LastAMASeen = max(TimeGenerated),\r\n        Latest = arg_max(TimeGenerated, OSType, OSName, Category)\r\n        by Computer\r\n    | extend ComputerLower = tolower(Computer)\r\n    // exclude only devices that are actually ONBOARDED in DeviceInfo\r\n    | where ComputerLower !in (\r\n        DeviceInfo\r\n    | where OnboardingStatus == \"Onboarded\"\r\n    | summarize arg_max(TimeGenerated, OSPlatform) by DeviceName\r\n    | extend DeviceNameLower = tolower(DeviceName)\r\n    | project DeviceNameLower\r\n    )\r\n// join security events\r\n| join kind=leftouter (\r\n    SecurityEvent\r\n    //Check for logs within 3 day timeframe. Change accordingly if you want to check a bigger timeframe.\r\n    | where TimeGenerated > ago(3d)\r\n    | summarize LastSecurityEvent = max(TimeGenerated) by Computer\r\n    | extend ComputerLower = tolower(Computer)\r\n    )\r\n    on ComputerLower\r\n| extend \r\n    DeviceName = Computer,\r\n    // prefer full OSName if available\r\n    OSPlatform = coalesce(OSName, OSType, Category, \"Unknown\"),\r\n    HasAMA = \"Yes\",\r\n    SendsSecurityLogs = iff(isnotempty(LastSecurityEvent), \"Yes\", \"No\"),\r\n    Source = \"AMA Only\"\r\n| project\r\n    //DeviceName,\r\n    DeviceName = tostring(split(DeviceName, \".\")[0]),\r\n    OSPlatform,\r\n    HasAMA,\r\n    LastAMASeen,\r\n    SendsSecurityLogs,\r\n    LastSecurityEvent,\r\n    Source\r\n)\r\n// classify\r\n| extend StatusCategory = case(\r\nSource == \"Defender Device\" and HasAMA == \"Yes\", \"MDE + AMA\",\r\nSource == \"Defender Device\" and HasAMA == \"No\", \"MDE Only\",\r\nSource == \"AMA Only\", \"AMA Only\",\r\n\"Unknown\"\r\n)\r\n// Removed server-only filter so all Windows 10/11 devices appear too\r\n| order by Source asc, DeviceName asc\r\n// HasAMA logic:\r\n// - if HasAMA == \"All\" -> don't filter\r\n// - otherwise filter for selected \"Yes\" or \"No\"\r\n| where '{HasAMA}' == 'All' or HasAMA == '{HasAMA}'\r\n//Filter OS Platform\r\n//Text filter for OSPlatform column, provide for example ServiceFabricReliableActorEvent\r\n| where OSPlatform contains '{ServerFilter}'",
+                "size": 2,
                 "title": "Breakdown of devices onboarded with MDE and (not) sending SecurityEvents via AMA",
                 "timeContextFromParameter": "TimeRange",
                 "showExportToExcel": true,
                 "queryType": 0,
-                "resourceType": "microsoft.operationalinsights/workspaces",
+                "resourceType": "{Workspace}",
                 "crossComponentResources": [
-                    "{Workbook}"
+                    "{Workspace}"
                 ]
             },
             "name": "MDEvsAMA",
-            "id": "d74c46f7-937d-47c6-bc92-668f47e6a482"
+            "id": "b4ee9dc2-7d6a-4670-9b03-8d5132fa6b49"
         },
         {
             "type": 1,
@@ -170,7 +174,7 @@
                 "json": "# Overview of (all) DCR's assigned to machines. \r\nFilter based on Machine name from the output of \"Breakdown of devices onboarded with MDE and (not) sending SecurityEvents via AMA\"."
             },
             "name": "text - 5",
-            "id": "d20f5358-35d1-4844-9723-e04541b1b97e"
+            "id": "184418bd-b43e-469b-bb7d-53f28c57dc77"
         },
         {
             "type": 9,
@@ -192,7 +196,7 @@
                 "style": "pills"
             },
             "name": "parameters - 4",
-            "id": "3ae03dce-b2f3-4014-a3da-3251c27e729d"
+            "id": "d726b838-f857-4854-b575-c53506c9efcd"
         },
         {
             "type": 3,
@@ -206,7 +210,7 @@
                 "resourceType": "microsoft.resourcegraph/resources"
             },
             "name": "DCR",
-            "id": "d04b436d-d9cb-4fad-accf-fd8735ea76e7"
+            "id": "0bc7df04-84bb-4bd7-8fb7-8f79e4d392cf"
         },
         {
             "type": 1,
@@ -214,7 +218,7 @@
                 "json": "# Combined view of AMA enabled and related DCR\r\nThis is a merge of the Devices with MDE enabled and the DCR associated to machines table to have an overview of the machines that have a DCR configured.\r\n\r\nAdvisory is to set the filter on HasAMA to YES to make the view as clean as possible."
             },
             "name": "text - 10",
-            "id": "aa7fd4f7-cec4-4508-856c-ac63c95d6e8c"
+            "id": "fee024a3-1bad-49c9-a196-84ebc7030d8b"
         },
         {
             "type": 3,
@@ -225,7 +229,7 @@
                 "queryType": 7
             },
             "name": "Merge",
-            "id": "1bb58230-6b28-4040-8b73-efb97d8634ab"
+            "id": "4efff60e-f797-4f21-90cb-7c806cec70fb"
         }
     ],
     "isLocked": true,
