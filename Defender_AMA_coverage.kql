@@ -81,7 +81,6 @@ Source == "Defender Device" and HasAMA == "No", "MDE Only",
 Source == "AMA Only", "AMA Only",
 "Unknown"
 )
-// Removed server-only filter so all Windows 10/11 devices appear too
 | order by Source asc, DeviceName asc
 // HasAMA filter:
 //| where HasAMA == 'Yes' or 'No'
