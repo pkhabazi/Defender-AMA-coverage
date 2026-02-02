@@ -26,9 +26,11 @@ By correlating data from **DeviceInfo**, **Heartbeat**, and **SecurityEvent** ta
 *   **Filtering Options**  
     Filter by:
     *   Workspace
-    *   Time range
+    *   Time range (default: 7 days)
     *   OS platform
     *   AMA status (All, Yes, No)
+    *   Exclude Workstations (default: Yes)
+    *   Exclude Compliant Machines
 
 *   **Summary Tiles**  
     Quick overview of device counts based on AMA status
@@ -49,12 +51,16 @@ By correlating data from **DeviceInfo**, **Heartbeat**, and **SecurityEvent** ta
 
 ## Important Notes
 
-*   **Windows-Only Support**  
-    This workbook is designed for **Windows endpoints** (Windows Server and Windows client OS).  
-    Linux devices are not included because they do not generate SecurityEvent logs.
+*   **Windows and Linux Support**  
+    This workbook supports both **Windows** and **Linux** endpoints.  
+    - Windows devices are validated using the **SecurityEvent** table
+    - Linux devices are validated using the **Syslog** table
 
-*   **SecurityEvent Check**  
-    Queries validate Windows security log ingestion into Sentinel using the **SecurityEvent** table.
+*   **Log Ingestion Check**  
+    Queries validate security log ingestion into Sentinel using **SecurityEvent** (Windows) and **Syslog** (Linux) tables.
+
+*   **Device Type Filtering**  
+    By default, workstations and mobile devices are excluded to focus on server infrastructure. This can be toggled via the **Exclude Workstations** filter.
 
 *   **OS Name Limitation**  
     Some AMA versions do not report the full OS name (e.g., only `Windows` instead of `Windows Server 2025`).  
@@ -68,6 +74,7 @@ By correlating data from **DeviceInfo**, **Heartbeat**, and **SecurityEvent** ta
     *   **DeviceInfo** (Defender onboarding status)
     *   **Heartbeat** (AMA presence and last seen timestamp)
     *   **SecurityEvent** (Windows security log ingestion)
+    *   **Syslog** (Linux security log ingestion)
 2.  Joins and correlates AMA presence, Defender onboarding, and log ingestion.
 3.  Applies filters for AMA status and OS platform.
 4.  Outputs:
@@ -95,6 +102,7 @@ By correlating data from **DeviceInfo**, **Heartbeat**, and **SecurityEvent** ta
     *   `DeviceInfo`
     *   `Heartbeat`
     *   `SecurityEvent`
+    *   `Syslog`
 
 ***
 
@@ -106,7 +114,9 @@ By correlating data from **DeviceInfo**, **Heartbeat**, and **SecurityEvent** ta
 4.  Save and customize filters as needed
 
 **Advisory:**  
-Set `HasAMA = Yes` for a cleaner merged view  
-Default time range is 3 days (adjustable)
+- Set `HasAMA = Yes` for a cleaner merged view  
+- Default time range is 7 days (adjustable)
+- Workstations are excluded by default (toggle with **Exclude Workstations** filter)
+- Compliant machines (MDE + AMA) are excluded by default to focus on remediation
 
 ***
