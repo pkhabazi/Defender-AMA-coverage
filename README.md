@@ -117,6 +117,6 @@ By correlating data from **DeviceInfo**, **Heartbeat**, and **SecurityEvent** ta
 - Set `HasAMA = Yes` for a cleaner merged view
 - Default time range is 7 days (adjustable)
 - Workstations are excluded by default (toggle with **Exclude Workstations** filter)
-- Compliant machines (MDE + AMA) are excluded by default to focus on remediation
+- By default, the **Exclude Compliant** filter is set to `MDE + AMA`, which excludes compliant machines so you can focus on remediation. Adjust this filter to include compliant devices if needed.
 
 ***
