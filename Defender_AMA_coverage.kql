@@ -1,6 +1,16 @@
+// Defender and AMA Coverage Report
+// This query provides a report on devices onboarded in Microsoft Defender for Endpoint (MDE)
+// and their status regarding Azure Monitor Agent (AMA) log sending.
+// It identifies devices that are onboarded in MDE with or without AMA,
+// as well as devices that are sending logs via AMA but are not onboarded in MDE
+// Exclude Workstations from the report
+let ExcludeWorkstation = "Workstation";
+// Devices onboarded in Defender with or without AMA
 (
 DeviceInfo
 | where OnboardingStatus == "Onboarded"
+| where DeviceType <> ExcludeWorkstation
+| where DeviceType <> "Mobile"
 | summarize arg_max(TimeGenerated, OSPlatform, OnboardingStatus) by DeviceName
 | extend DeviceNameLower = tolower(tostring(split(DeviceName, ".")[0]))
 | join kind=leftouter (
@@ -59,6 +69,7 @@ DeviceInfo
     | where ComputerLower !in (
         DeviceInfo
     | where OnboardingStatus == "Onboarded"
+    | where DeviceType <> ExcludeWorkstation
     | summarize arg_max(TimeGenerated, OSPlatform) by DeviceName
     | extend DeviceNameLower = tolower(tostring(split(DeviceName, ".")[0]))
     | project DeviceNameLower
@@ -67,6 +78,8 @@ DeviceInfo
     | join kind=leftouter (
         DeviceInfo
         | where OnboardingStatus != "Onboarded"
+        | where OnboardingStatus == "Onboarded"
+        | where DeviceType <> ExcludeWorkstation
         | summarize arg_max(TimeGenerated, OSPlatform, OnboardingStatus) by DeviceName
         | extend DeviceNameLower = tolower(tostring(split(DeviceName, ".")[0]))
         | project DeviceNameLower, DefenderOSPlatform = OSPlatform, DefenderStatus = OnboardingStatus
